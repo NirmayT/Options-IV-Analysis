@@ -1,6 +1,12 @@
+# Virtual Environment
 venv/
 .venv/
 __pycache__/
 *.pyc
+
+# Local Databases & Data Assets
 database/
 *.db
+
+# IDE settings
+.vscode/
