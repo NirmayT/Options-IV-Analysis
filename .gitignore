@@ -1,12 +1,20 @@
-# Virtual Environment
-venv/
-.venv/
-__pycache__/
-*.pyc
-
-# Local Databases & Data Assets
-database/
+# Database
+*.sqlite
 *.db
 
-# IDE settings
-.vscode/
+# Python bytecode & cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Environment and secrets
+.env
+.venv/
+venv/
+ENV/
+
+# OS metadata
+.DS_Store
+Thumbs.db
