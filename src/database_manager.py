@@ -49,15 +49,15 @@ def initialize_database():
         PRIMARY KEY (snapshot_time, ticker, expiry, strike, option_type)
     );
     """
-    with engine.connect() as connection:
+    with engine.begin() as connection:
         connection.execute(text(create_raw_table_query))
-        connection.execute(text(create_cleaned_table_query)
+        connection.execute(text(create_cleaned_table_query))
 
     print ("[DATABASE] Connection established and tables verified")
 
 def delete_recent_snapshot(cutoff_str: str, tickers: list):
     """
-    Deletes any rows in the database that fall within the 15-minute replacement window to 
+    Deletes any rows in the database that fall within the 15-minute replacement window to
     prevent duplicate constraint errors.
     """
     with engine.begin() as connection:
@@ -65,10 +65,10 @@ def delete_recent_snapshot(cutoff_str: str, tickers: list):
             parameters={"cutoff": cutoff_str, "ticker": ticker}
 
             # Wipe recent entries from both tables
-            connection.execute(text(f"DELETE FROM {config.RAW_OPTIONS_TABLE} WHERE snapshot_time>= :cutoff
-                                    AND ticker = :ticker"),parameters)
-            connection.execute(text(f"DELETE FROM {config.CLEAN_OPTIONS_TABLE} WHERE snapshot_time>= :cutoff
-                                    AND ticker = :ticker"),parameters)
+            connection.execute(text(f"""DELETE FROM {config.RAW_OPTIONS_TABLE} WHERE snapshot_time>= :cutoff
+                                    AND ticker = :ticker"""),parameters)
+            connection.execute(text(f"""DELETE FROM {config.CLEAN_OPTIONS_TABLE} WHERE snapshot_time>= :cutoff
+                                    AND ticker = :ticker"""),parameters)
 
 def save_raw_snapshot(df: pd.DataFrame):
     """ Saves the raw dataframe to SQL database."""
@@ -80,7 +80,15 @@ def save_clean_snapshot(df: pd.DataFrame):
     if not df.empty:
         df.to_sql(config.CLEAN_OPTIONS_TABLE, engine, if_exists="append", index=False)
 
-            
+def load_raw_snapshot(query_modifier: str = "") -> pd.DataFrame:
+    """Loads raw data."""
+    query = f"SELECT * FROM {config.RAW_OPTIONS_TABLE} {query_modifier}"
+    return pd.read_sql_query(query,engine)
+
+def load_clean_snapshot(query_modifier: str = "") -> pd.DataFrame:
+    """Loads clean data."""
+    query = f"SELECT * FROM {config.CLEAN_OPTIONS_TABLE} {query_modifier}"
+    return pd.read_sql_query(query,engine)
 
 initialize_database()
 

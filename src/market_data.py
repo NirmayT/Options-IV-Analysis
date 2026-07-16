@@ -15,7 +15,7 @@ def prepare_option_df(ticker_obj:yf.Ticker, ticker_symbol: str, underlying_price
     - option_type (str): The type of option to fetch ("Call" or "Put"). Default is "Call".
     Returns:
     - pd.DataFrame: A DataFrame containing the option chain data with additional calculated columns.
-    
+
     """
     expiry_dates = ticker_obj.options
 
@@ -35,7 +35,7 @@ def prepare_option_df(ticker_obj:yf.Ticker, ticker_symbol: str, underlying_price
     except Exception as e:
         print(f"[WARNING] Error fetching option chain for {ticker_symbol} on {nearest_expiry}: {e}")
         return pd.DataFrame()  # Return an empty DataFrame on error
-    
+
     # 3. Feature Engineering
     options_df['snapshot_time'] = snapshot_time.strftime("%Y-%m-%d %H:%M:%S")
     options_df['ticker'] = ticker_symbol
@@ -55,41 +55,44 @@ def prepare_option_df(ticker_obj:yf.Ticker, ticker_symbol: str, underlying_price
         'impliedVolatility': 'yahoo_iv',
         'lastPrice': 'last_trade_price'
     }
-    options_df = options_df.rename(columns=rename_mapping, inplace=True)
+    options_df = options_df.rename(columns=rename_mapping)
 
     target_columns = ['snapshot_time', 'ticker', 'underlying_price', 'option_type','expiry', 'days_to_expiry',
                         'strike', 'bid', 'ask', 'mid_price', 'last_trade_price', 'volume', 'open_interest', 'yahoo_iv']
-    
+
     options_df = options_df[target_columns] # Return only the relevant columns in correct order
 
-    def create_market_snapshot() -> pd.DataFrame:
-        """
-        Loops through the config tickers, prepares their dataframes using the helper,
-        and concatenates them into a single master dataframe.
+    return options_df[target_columns]
 
-        Parameters:
-        
-        """
-        unified_snapshot_time = datetime.now()  # Generate a single timestamp for the entire snapshot
+def create_market_snapshot() -> pd.DataFrame:
+    """
+    Loops through the config tickers, prepares their dataframes using the helper,
+    and concatenates them into a single master dataframe.
+    Parameters:
+    """
+    unified_snapshot_time = datetime.now()  # Generate a single timestamp for the entire snapshot
 
-        # Load tickers from config into a list so we can loop through them
-        tickers_to_fetch = [config.STOCK_TICKER, config.ETF_TICKER]
-        all_frames = []
+    # Load tickers from config into a list so we can loop through them
+    tickers_to_fetch = [config.STOCK_TICKER, config.ETF_TICKER]
+    all_frames = []
 
-        for symbol in tickers_to_fetch:
-            ticker_obj = yf.Ticker(symbol)
+    for symbol in tickers_to_fetch:
+        ticker_obj = yf.Ticker(symbol)
 
-            try:
-                current_price = ticker_obj.fast_info["lastPrice"]
-            except Exception as e:
-                print(f"[WARNING] Could not fetch price for {symbol}: {e}")
-                continue # Skip to next ticker if this one fails
+        try:
+            current_price = ticker_obj.fast_info["lastPrice"]
+        except Exception as e:
+            print(f"[WARNING] Could not fetch price for {symbol}: {e}")
+            continue # Skip to next ticker if this one fails
 
-            # Call helper function for each ticker
-            df = prepare_option_df(ticker_obj=ticker_obj, ticker_symbol=symbol, underlying_price=current_price,
+       # Call helper function for each ticker
+        df = prepare_option_df(ticker_obj=ticker_obj, ticker_symbol=symbol, underlying_price=current_price,
                                    snapshot_time=unified_snapshot_time, option_type=config.OPTION_TYPE)
-            
-            if all_frames:
-                return pd.concat(all_frames, ignore_index=True)
-            
-            return pd.DataFrame()
+        
+        if not df.empty:
+            all_frames.append(df)
+
+    if all_frames:
+            return pd.concat(all_frames, ignore_index=True), unified_snapshot_time
+
+    return pd.DataFrame(), unified_snapshot_time
