@@ -49,9 +49,42 @@ def initialize_database():
         PRIMARY KEY (snapshot_time, ticker, expiry, strike, option_type)
     );
     """
+    # 3. Analystics master table
+    create_analytics_table_query = f"""
+    CREATE TABLE IF NOT EXISTS {config.ANALYTICS_OPTIONS_TABLE} (
+        snapshot_time TEXT,
+        ticker TEXT,
+        underlying_price REAL,
+        expiry TEXT,
+        days_to_expiry INTEGER,
+        years_to_expiry REAL,
+        option_type TEXT,
+        strike REAL,
+        bid REAL,
+        ask REAL,
+        last_trade_price REAL,
+        volume INTEGER,
+        open_interest INTEGER,
+        yahoo_iv REAL,
+        mid_price REAL,
+        bs_theoretical_price REAL,
+        calculated_iv REAL,
+        reconstructed_market_price REAL,
+        iv_reconstruction_error REAL,
+        pricing_error REAL,
+        abs_pricing_error REAL,
+        rel_pricing_error REAL,
+        iv_difference REAL,
+        abs_iv_difference REAL,
+        moneyness REAL,
+        log_moneyness REAL,
+        PRIMARY KEY (snapshot_time, ticker, expiry, strike, option_type)
+    );
+    """
     with engine.begin() as connection:
         connection.execute(text(create_raw_table_query))
         connection.execute(text(create_cleaned_table_query))
+        connection.execute(text(create_analytics_table_query))
 
     print ("[DATABASE] Connection established and tables verified")
 
@@ -65,9 +98,11 @@ def delete_recent_snapshot(cutoff_str: str, tickers: list):
             parameters={"cutoff": cutoff_str, "ticker": ticker}
 
             # Wipe recent entries from both tables
-            connection.execute(text(f"""DELETE FROM {config.RAW_OPTIONS_TABLE} WHERE snapshot_time>= :cutoff
+            connection.execute(text(f"""DELETE FROM {config.RAW_OPTIONS_TABLE} WHERE snapshot_time >= :cutoff
                                     AND ticker = :ticker"""),parameters)
-            connection.execute(text(f"""DELETE FROM {config.CLEAN_OPTIONS_TABLE} WHERE snapshot_time>= :cutoff
+            connection.execute(text(f"""DELETE FROM {config.CLEAN_OPTIONS_TABLE} WHERE snapshot_time >= :cutoff
+                                    AND ticker = :ticker"""),parameters)
+            connection.execute(text(f"""DELETE FROM {config.ANALYTICS_OPTIONS_TABLE} WHERE snapshot_time >= :cutoff
                                     AND ticker = :ticker"""),parameters)
 
 def save_raw_snapshot(df: pd.DataFrame):
@@ -80,6 +115,11 @@ def save_clean_snapshot(df: pd.DataFrame):
     if not df.empty:
         df.to_sql(config.CLEAN_OPTIONS_TABLE, engine, if_exists="append", index=False)
 
+def save_analytics_snapshot(df: pd.DataFrame):
+    """ Saves the analystics dataframe to SQL database."""
+    if not df.empty:
+        df.to_sql(config.ANALYTICS_OPTIONS_TABLE, engine, if_exists="append", index=False)
+
 def load_raw_snapshot(query_modifier: str = "") -> pd.DataFrame:
     """Loads raw data."""
     query = f"SELECT * FROM {config.RAW_OPTIONS_TABLE} {query_modifier}"
@@ -90,6 +130,7 @@ def load_clean_snapshot(query_modifier: str = "") -> pd.DataFrame:
     query = f"SELECT * FROM {config.CLEAN_OPTIONS_TABLE} {query_modifier}"
     return pd.read_sql_query(query,engine)
 
-initialize_database()
-
-print("Database connection established.")
+def load_analytics_snapshot(query_modifier: str = "") -> pd.DataFrame:
+    """Loads analytics data."""
+    query = f"SELECT * FROM {config.ANALYTICS_OPTIONS_TABLE} {query_modifier}"
+    return pd.read_sql_query(query,engine)

@@ -30,7 +30,7 @@ def black_scholes_call(S: float, K: float, T_days: float, volatility: float,
 
     # 2. Edge Case: Volatility or stock/strike price must be positive to calculate d1/d2
     if volatility <= 0 or S<= 0 or K <= 0:
-        return max(0.0, S-K)
+        return np.nan
 
     try:
         # Calculate d1 and d2
@@ -44,7 +44,7 @@ def black_scholes_call(S: float, K: float, T_days: float, volatility: float,
         return max(0.0, float(call_price))
 
     except Exception:
-        return max(0.0, S-K)
+        return np.nan
 
 def calculate_theoretical_prices(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -69,7 +69,7 @@ def calculate_theoretical_prices(df: pd.DataFrame) -> pd.DataFrame:
                                          priced_df["yahoo_iv"])]
 
     # Calculate the pricing error feature (Market - Theory)
-    priced_df["pricing_error"] = priced_df["mid_price"] - priced_df["bs_theoretical_price"]
+    # priced_df["pricing_error"] = priced_df["mid_price"] - priced_df["bs_theoretical_price"]
 
     return priced_df
 

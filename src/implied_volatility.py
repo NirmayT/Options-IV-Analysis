@@ -6,7 +6,7 @@ from black_scholes import black_scholes_call
 
 def calculate_implied_volatility(S: float, K: float, T_days: float, market_price: float,
                                  r: float = config.RISK_FREE_RATE, max_iterations: int = 100,
-                                 tolerance: float = 0.0001) -> float:
+                                 tolerance: float = config.IV_SOLVER_TOLERANCE) -> float:
     """
     Calculates the Implied Volatility for a Call Option using Bisection Serach.
 
@@ -30,8 +30,11 @@ def calculate_implied_volatility(S: float, K: float, T_days: float, market_price
         return np.nan
     
     # 2. Edge Case: Intrinsic value check
-    instrinsic_value = max(0.0, S-K)
-    if market_price <= instrinsic_value:
+    intrinsic_value = max(0.0, S-K)
+    if market_price < intrinsic_value:
+        return np.nan
+
+    if np.isclose(market_price, intrinsic_value, atol=tolerance):
         return 0.0
     
     # Set search boundaries (0% to 500% volatility)
@@ -44,7 +47,7 @@ def calculate_implied_volatility(S: float, K: float, T_days: float, market_price
         return np.nan
     
     # Run Bisection search
-    for i in range(max_iterations)
+    for i in range(max_iterations):
         mid_vol = (low_vol + high_vol) / 2.0
 
         # Calculate theoertical price at our current guess
@@ -80,14 +83,12 @@ def calculate_dataframe_iv(df: pd.DataFrame) -> pd.DataFrame:
 
     # Calculate the IVs
     iv_df["calculated_iv"] = [calculate_implied_volatility(S, K, T_days, market_price)
-                              for S, K, T_days, market_price in zip(
-                                  iv_df["underlying_price"]
-                                  iv_df["strike"]
-                                  iv_df["days_to_expiry"]
+                              for S, K, T_days, market_price in zip(iv_df["underlying_price"],
+                                  iv_df["strike"],
+                                  iv_df["days_to_expiry"],
                                   iv_df["mid_price"])]
     
     # Benchmark against Yahoo's IV
-    iv_df["iv_difference"] = iv_df["calculated_iv"] - iv_df["yahoo_iv"]
+    # iv_df["iv_difference"] = iv_df["calculated_iv"] - iv_df["yahoo_iv"]
 
     return iv_df
-

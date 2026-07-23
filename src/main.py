@@ -2,6 +2,8 @@ import config
 import market_data
 import database_manager as db
 import data_validation as dv
+import analytics
+import analytics_validation as av
 
 from datetime import timedelta
 
@@ -9,10 +11,13 @@ def main():
     """
     Main orchestrator for the automated options data pipeline.
     Controls the end-to-end data flow:
-    Ingestion -> De-duplication -> Staging Raw -> Validation -> Staging Cleaned:
+    Get Data -> Wipe Old Duplicates -> Save Raw -> Clean Data -> Save Clean 
+    -> Calculate Options Math -> Validate Analytics -> Save Final Results
     """
 
     print("\n" + "=" * 150)
+
+    db.initialize_database()
     
     # STEP 1: Fetch Raw Market Snapshot from Yahoo Finance
 
@@ -57,11 +62,30 @@ def main():
     print("Pipeline Execution Completed Sucessfully")
     print("="*150 + "\n")
 
+    # STEP 6: Run Black-Scholes math (calculate implied volatility and theoretical prices)
+    analytics_df = analytics.generate_analytics_df(clean_df)
+
+    # STEP 7: Validate mathematical outputs
+    print("[PIPELINE] Validating analytics outputs and dropping hard numerical failures")
+    validated_analytics_df = av.run_analytics_validation_and_cleaning(analytics_df)
+
+    if validated_analytics_df.empty:
+        print("[PIPELINE] Warning: Zero analytics records survived validation check.")
+        print("=" * 150 + "\n")
+        return
+
+    # STEP 8: Save all the final calculated results into the master analytics table
+    print(f"[PIPELINE] Saving {len(validated_analytics_df)} validated rows to the analytics table")
+    db.save_analytics_snapshot(validated_analytics_df)
+    print("[PIPELINE] Analytics data saved successfully.")
+
+    print("\n--- Final Analytics Preview ---")
+    print(validated_analytics_df.head())
+
+    print("\n" + "=" * 150)
+    print("PIPELINE COMPLETED SUCCESSFULLY")
+    print("=" * 150 + "\n")
+
+
 if __name__ == "__main__":
     main()
-
-
-
-
-
-    

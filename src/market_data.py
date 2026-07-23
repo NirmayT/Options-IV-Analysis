@@ -64,7 +64,7 @@ def prepare_option_df(ticker_obj:yf.Ticker, ticker_symbol: str, underlying_price
 
     return options_df[target_columns]
 
-def create_market_snapshot() -> pd.DataFrame:
+def create_market_snapshot() -> tuple[pd.DataFrame, datetime]:
     """
     Loops through the config tickers, prepares their dataframes using the helper,
     and concatenates them into a single master dataframe.
