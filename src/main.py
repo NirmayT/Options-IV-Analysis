@@ -4,6 +4,8 @@ import database_manager as db
 import data_validation as dv
 import analytics
 import analytics_validation as av
+import regime_analysis as ra
+import visualization as viz
 
 from datetime import timedelta
 
@@ -51,16 +53,14 @@ def main():
 
     # STEP 5: Persist Validated Data to Clean Production Table
 
-    if not clean_df.empty:
-        print(f"[PIPELINE] Writing {len(clean_df)} valid records to analytical engine")
-        db.save_clean_snapshot(clean_df)
-        print("[PIPELINE] Clean data snapshot successfully persisted.")
-    else:
-        print("[PIPELINE] Warning: Zero records survived data clearing parameters. Clean database unchanged.")
+    if clean_df.empty:
+        print("[PIPELINE] Warning: Zero records survived data cleaning parameters. Aborting downstream steps.")
+        print("=" * 150 + "\n")
+        return
 
-    print("\n" + "="*150)
-    print("Pipeline Execution Completed Sucessfully")
-    print("="*150 + "\n")
+    print(f"[PIPELINE] Writing {len(clean_df)} valid records to analytical engine")
+    db.save_clean_snapshot(clean_df)
+    print("[PIPELINE] Clean data snapshot successfully persisted.")
 
     # STEP 6: Run Black-Scholes math (calculate implied volatility and theoretical prices)
     analytics_df = analytics.generate_analytics_df(clean_df)
@@ -79,13 +79,39 @@ def main():
     db.save_analytics_snapshot(validated_analytics_df)
     print("[PIPELINE] Analytics data saved successfully.")
 
-    print("\n--- Final Analytics Preview ---")
-    print(validated_analytics_df.head())
+    # STEP 9: Assign historical VIX levels and classify market regimes
+    print("\n[RESEARCH] Matching option data with market fear levels (VIX)")
+    regime_enriched_df = ra.assign_regimes(validated_analytics_df)
+
+    # STEP 10: Calculate price curves
+    print("[RESEARCH] Calculating price curves and insurance costs")
+    smile_df = ra.calculate_smile_metrics(regime_enriched_df)
+
+    # STEP 11: Create a simple comparison summary table
+    print("[RESEARCH] Building summary table")
+    today_str = snapshot_time.strftime("%Y-%m-%d")
+    regime_summary_df = ra.calculate_regime_summary(regime_enriched_df, snapshot_time_str=today_str)
+
+    print("\n" + "-" * 50 + " MARKET ENVIRONMENT SUMMARY " + "-" * 50)
+    print(regime_summary_df.to_string(index=False))
+    print("-" * 150)
+
+    # STEP 12: Save the finished research data into the database tables
+    print(f"\n[RESEARCH] Saving detailed results to {config.REGIME_ANALYSIS_TABLE}")
+    db.save_regime_analysis_snapshot(smile_df)
+
+    today_str = snapshot_time.strftime("%Y-%m-%d")
+    print(f"[RESEARCH] Saving summary totals to {config.REGIME_SUMMARY_TABLE}")
+    db.save_regime_summary_snapshot(regime_summary_df)
+
+    print(regime_summary_df.head())
+
+    # STEP 13: Generate research figures and validation charts
+    viz.generate_all_plots(regime_enriched_df, regime_summary_df)
 
     print("\n" + "=" * 150)
-    print("PIPELINE COMPLETED SUCCESSFULLY")
+    print("PIPELINE & RESEARCH COMPLETED SUCCESSFULLY")
     print("=" * 150 + "\n")
-
 
 if __name__ == "__main__":
     main()

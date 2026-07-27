@@ -65,7 +65,6 @@ def clean_analytics_data(df: pd.DataFrame) -> pd.DataFrame:
 
     return df[valid_mask].copy().reset_index(drop=True)
 
-
 def run_analytics_validation_and_cleaning(analytics_df: pd.DataFrame, tolerance: float = config.IV_SOLVER_TOLERANCE) -> pd.DataFrame:
     """
     Wrapper function that runs pre-cleaning diagnostics, filters out hard numerical failures,
