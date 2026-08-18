@@ -88,36 +88,6 @@ def assign_regimes(df: pd.DataFrame) -> pd.DataFrame:
 
     return df_out
 
-def assign_regimes(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Merges historical daily VIX values with options snapshots matching on snapshot date.
-    Temporal Join: snapshot_date -> VIX date -> regime label.
-    """
-    if df.empty or "snapshot_time" not in df.columns:
-        return df
-
-    df_out = df.copy()
-
-    # Extract calendar date from snapshot timestamp
-    df_out["snapshot_date"] = pd.to_datetime(df_out["snapshot_time"]).dt.strftime("%Y-%m-%d")
-
-    min_date = df_out["snapshot_date"].min()
-    max_date = (pd.to_datetime(df_out["snapshot_date"].max()) + pd.Timedelta(days=2)).strftime("%Y-%m-%d")
-
-    vix_df = fetch_historical_vix(min_date, max_date)
-
-    if not vix_df.empty:
-        df_out = df_out.merge(vix_df, left_on="snapshot_date", right_on="date", how="left")
-        df_out.drop(columns=["date"], inplace=True, errors="ignore")
-    else:
-        # Preserve missing data integrity with NaN instead of arbitrary fallbacks
-        df_out["vix_level"] = np.nan
-
-    df_out["regime"] = df_out["vix_level"].apply(classify_vix_regime)
-    df_out.drop(columns=["snapshot_date"], inplace=True, errors="ignore")
-
-    return df_out
-
 def calculate_smile_metrics(df: pd.DataFrame) -> pd.DataFrame:
     """
     Calculates volatility smile geometry per (snapshot, ticker, expiry, regime).
