@@ -1,20 +1,85 @@
-# Database
-*.sqlite
-*.db
+# ============================================
+# Local database and generated data
+# ============================================
+database/options.db
+database/*.db
+database/*.sqlite
+database/*.sqlite3
 
-# Python bytecode & cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.pytest_cache/
+# Keep the empty database directory in Git
+!database/.gitkeep
 
-# Environment and secrets
-.env
-.venv/
+
+# ============================================
+# Python environments
+# ============================================
 venv/
+.venv/
+env/
 ENV/
 
-# OS metadata
+
+# ============================================
+# Python cache and build files
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+
+# ============================================
+# IDE and operating-system files
+# ============================================
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
+
+
+# ============================================
+# Temporary and local project files
+# ============================================
+*.log
+*.tmp
+*.bak
+*.zip
+
+create_handbook.py
+README_REPLACEMENT_NOTES.md
+REPLACE_INSTRUCTIONS.md
+
+handbook_montage*.png
+Options_IV_Analysis_Interview_Handbook.docx
+Options_IV_Analysis_Interview_Handbook.pdf
+
+
+# ============================================
+# Secrets and environment variables
+# ============================================
+.env
+.env.*
+!.env.example
+credentials.json
+token.json
+
+
+# ============================================
+# Plots
+# ============================================
+# Final PNG charts are intentionally committed
+# so they can be displayed in README.md.
+
+# Ignore temporary chart formats if generated
+plots/*.svg
+plots/*.pdf
+plots/*.html
+
+# Keep the plots directory
+!plots/.gitkeep
